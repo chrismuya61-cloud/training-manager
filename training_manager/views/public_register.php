@@ -22,15 +22,21 @@
         .remove-row { position: absolute; top: 10px; right: 15px; color: #ef4444; cursor: pointer; font-size: 1.2rem; font-weight: bold; }
         .add-btn { background: #eff6ff; color: #2563eb; border: 2px dashed #bfdbfe; width: 100%; padding: 12px; border-radius: 10px; font-weight: 600; margin-top: 10px; transition: 0.2s; }
         .add-btn:hover { background: #dbeafe; border-color: #2563eb; }
+        
+        /* Logo Fix */
+        .logo-container img { max-height: 40px; }
+        .logo-container { filter: brightness(0) invert(1); margin-bottom: 15px; }
     </style>
 </head>
 <body>
 <div class="register-card">
     <div class="card-header">
-        <?php echo get_company_logo(base_url('uploads/company/'), 'img-responsive', style:'max-height:40px; filter: brightness(0) invert(1); margin-bottom:15px;'); ?>
+        <div class="logo-container">
+            <?php echo get_company_logo(base_url('uploads/company/'), 'img-responsive'); ?>
+        </div>
         <h2 style="margin:0; font-weight:800;"><?php echo $training->subject; ?></h2>
         <p style="opacity:0.9; margin-top:8px; font-size: 0.95rem;">
-            <i class="fa fa-calendar-alt"></i> <?php echo _dt($training->start_date); ?> &nbsp;|&nbsp; <i class="fa fa-map-marker-alt"></i> <?php echo $training->venue; ?>
+            <i class="fa fa-calendar-alt"></i> <?php echo _dt($training->start_date); ?>  |  <i class="fa fa-map-marker-alt"></i> <?php echo $training->venue; ?>
         </p>
     </div>
     <div class="card-body">

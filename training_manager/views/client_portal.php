@@ -12,7 +12,11 @@
         .hero { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #fff; padding: 40px 0 80px; clip-path: polygon(0 0, 100% 0, 100% 85%, 0 100%); }
         .hero h1 { font-weight: 800; letter-spacing: -1px; margin-bottom: 5px; }
         .hero-meta { opacity: 0.8; font-size: 0.95rem; }
-        .portal-logo img { max-height: 50px; margin-bottom: 15px; filter: brightness(0) invert(1); opacity: 0.9; }
+        
+        /* Logo Fix */
+        .portal-logo img { max-height: 50px; }
+        .portal-logo { margin-bottom: 15px; filter: brightness(0) invert(1); opacity: 0.9; }
+
         .main-container { max-width: 1100px; margin: -50px auto 50px; padding: 0 20px; position: relative; z-index: 10; }
         .content-card { background: #fff; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); padding: 30px; height: 100%; border: 1px solid #e2e8f0; }
         .section-header { display: flex; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #f1f5f9; }
@@ -32,6 +36,9 @@
         .star-rating input { display: none; }
         .star-rating label { font-size: 2.2rem; color: #cbd5e1; cursor: pointer; transition: color 0.2s; }
         .star-rating input:checked ~ label, .star-rating label:hover, .star-rating label:hover ~ label { color: #f59e0b; }
+        .media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
+        .media-item { border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; text-align: center; transition: 0.2s; background: #f8fafc; }
+        .media-item:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
     </style>
 </head>
 <body>
@@ -39,7 +46,11 @@
     <div class="main-container">
         <div class="row align-items-center">
             <div class="col-md-8">
-                <div class="portal-logo"><a href="<?php echo site_url(); ?>"><?php echo get_company_logo(base_url('uploads/company/'), 'img-responsive', style:'filter: brightness(0) invert(1);'); ?></a></div>
+                <div class="portal-logo">
+                    <a href="<?php echo site_url(); ?>">
+                        <?php echo get_company_logo(base_url('uploads/company/'), 'img-responsive'); ?>
+                    </a>
+                </div>
                 <p class="hero-meta text-white-50 mb-1 mt-2">TRAINING PORTAL</p>
                 <h1><?php echo $training->subject; ?></h1>
                 <p class="hero-meta">
@@ -85,7 +96,6 @@
     <div class="row">
         
         <div class="col-lg-8 mb-4">
-            <!-- LEARNING JOURNEY GUIDE -->
             <div class="content-card mb-4" style="border-left: 4px solid #2563eb;">
                 <h5 class="font-weight-bold mb-3" style="color:#1e293b;">Your Learning Journey</h5>
                 <div style="display:flex; justify-content:space-between; text-align:center; font-size:0.85rem;">
@@ -127,13 +137,32 @@
                     <i class="fa fa-images text-primary"></i>
                     <h4>Resources & Media</h4>
                 </div>
-                <!-- Gallery and Docs logic... -->
-                <?php if(empty($media)){ echo '<div class="text-center p-5 text-muted bg-light rounded">No content available.</div>'; } ?>
+                <?php if(empty($media)){ ?>
+                    <div class="text-center p-5 text-muted bg-light rounded">No content available.</div>
+                <?php } else { ?>
+                    <div class="media-grid">
+                        <?php foreach($media as $m){ 
+                            $url = base_url('modules/training_manager/uploads/'.$training->id.'/'.$m->file_name);
+                            $is_img = (strpos($m->file_type, 'image') !== false);
+                        ?>
+                            <div class="media-item">
+                                <div style="height:100px; display:flex; align-items:center; justify-content:center; overflow:hidden; margin-bottom:10px;">
+                                    <?php if($is_img){ ?>
+                                        <a href="<?php echo $url; ?>" target="_blank"><img src="<?php echo $url; ?>" style="max-height:100px; max-width:100%;"></a>
+                                    <?php } else { ?>
+                                        <i class="fa fa-file-text-o fa-3x text-secondary"></i>
+                                    <?php } ?>
+                                </div>
+                                <a href="<?php echo $url; ?>" target="_blank" class="d-block text-truncate font-weight-bold"><?php echo $m->file_name; ?></a>
+                                <a href="<?php echo $url; ?>" download class="btn btn-xs btn-outline-primary mt-2"><i class="fa fa-download"></i> Download</a>
+                            </div>
+                        <?php } ?>
+                    </div>
+                <?php } ?>
             </div>
         </div>
 
         <div class="col-lg-4">
-            <!-- FEEDBACK WIDGET -->
             <?php if($training->require_feedback){ ?>
                 <div class="content-card mb-4">
                     <div class="section-header"><i class="fa fa-star text-warning"></i><h4>Feedback</h4></div>
@@ -158,7 +187,6 @@
                 </div>
             <?php } ?>
 
-            <!-- QUIZ WIDGET -->
             <?php if($training->require_quiz){ ?>
                 <div class="content-card mb-4">
                     <div class="section-header"><i class="fa fa-brain text-danger"></i><h4>Assessment</h4></div>
@@ -184,7 +212,6 @@
                 </div>
             <?php } ?>
 
-            <!-- CERTIFICATE WIDGET -->
             <?php $locked = ($training->require_quiz && !$reg->quiz_passed) || ($training->require_feedback && !$reg->feedback_submitted); ?>
             <div class="content-card text-center" style="<?php echo $locked ? 'opacity:0.8' : 'border:2px solid #10b981; background:#f0fdf4;'; ?>">
                 <div class="section-header justify-content-center" style="border:none;"><i class="fa fa-certificate text-success"></i><h4 style="color:#166534">Certificate</h4></div>
@@ -199,7 +226,6 @@
     </div>
 </div>
 
-<!-- MODAL: DESCRIPTION -->
 <div class="modal fade text-dark" id="descModal" tabindex="-1" role="dialog">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">

@@ -10,6 +10,7 @@
         .icon-box { width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; font-size: 40px; }
         .valid { background: #dcfce7; color: #166534; }
         .invalid { background: #fee2e2; color: #991b1b; }
+        .logo-box img { max-height: 30px; }
     </style>
 </head>
 <body>
@@ -28,8 +29,8 @@
             <h2 class="text-danger bold">Invalid Certificate</h2>
             <p class="text-muted">Code <strong><?php echo $code; ?></strong> not found.</p>
         <?php } ?>
-        <div class="mtop20 text-center">
-            <?php echo get_company_logo(base_url('uploads/company/'), 'img-responsive', style:'max-height:30px;'); ?>
+        <div class="mtop20 text-center logo-box">
+            <?php echo get_company_logo(base_url('uploads/company/'), 'img-responsive'); ?>
         </div>
     </div>
 </body>
