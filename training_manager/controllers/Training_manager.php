@@ -150,7 +150,6 @@ class Training_manager extends AdminController
         
         $t = $this->training_model->get($data['training_id']);
         if($t->price > 0 && !empty($data['email'])) {
-            // FIX: Added 'long_description', 'unit', 'order' to invoice items to prevent PHP Warnings
             $this->invoices_model->add([
                 'clientid'=>0, 
                 'number'=>get_option('next_invoice_number'), 
@@ -164,7 +163,7 @@ class Training_manager extends AdminController
                     'description'=>'Training Ticket', 
                     'long_description'=>'Registration for ' . $data['name'], 
                     'qty'=>1, 
-                    'rate'=>$t->price,
+                    'rate'=>$t->price, 
                     'unit'=>'Ticket',
                     'order'=>1
                 ]]
@@ -213,9 +212,7 @@ class Training_manager extends AdminController
             $handle = fopen($file, "r"); 
             $row = 0;
             while(($data = fgetcsv($handle, 1000, ",")) !== FALSE){ 
-                // Skip header row if it contains "Name"
                 if($row == 0 && strtolower($data[0]) == 'name') { $row++; continue; }
-                
                 if(!empty($data[0]) && !empty($data[1])) {
                     $this->training_model->add_walkin([
                         'training_id'=>$id, 
@@ -246,7 +243,7 @@ class Training_manager extends AdminController
     public function upload_media($id) { 
         if(isset($_FILES['file']['name']) && $_FILES['file']['name'] != ''){ 
             $path = module_dir_path('training_manager','uploads/'.$id.'/'); 
-            if(!is_dir($path)) { mkdir($path, 0755, true); }
+            if(!is_dir($path)) mkdir($path, 0755, true); 
             
             $config['upload_path'] = $path;
             $config['allowed_types'] = 'jpg|jpeg|png|gif|pdf|doc|docx|xls|xlsx|ppt|pptx';
@@ -273,14 +270,39 @@ class Training_manager extends AdminController
         redirect($_SERVER['HTTP_REFERER']); 
     }
 
-    public function add_question($id) { $this->db->insert(db_prefix().'training_quiz_questions', $this->input->post()); redirect($_SERVER['HTTP_REFERER']); }
+    // --- 6. ADD QUESTION (FIXED) ---
+    public function add_question($id) { 
+        // FIX: Insert ID into the data array before saving
+        $data = $this->input->post();
+        $data['training_id'] = $id; 
+        
+        $this->db->insert(db_prefix().'training_quiz_questions', $data); 
+        redirect($_SERVER['HTTP_REFERER']); 
+    }
+
     public function delete_question($id) { $this->db->where('id',$id)->delete(db_prefix().'training_quiz_questions'); redirect($_SERVER['HTTP_REFERER']); }
     public function add_expense() { $this->training_model->add_expense($this->input->post()); redirect($_SERVER['HTTP_REFERER']); }
     public function delete_event($id) { $this->training_model->delete($id); redirect(admin_url('training_manager')); }
     
-    // --- 6. CALENDAR & CERTIFICATES ---
+    // --- 7. CALENDAR & CERTIFICATES ---
     public function calendar() { $data['title']='Training Calendar'; $this->load->view('calendar', $data); }
     public function get_calendar_data() { $ts=$this->training_model->get_all(); $ev=[]; foreach($ts as $t){ $ev[]=['title'=>$t['subject'], 'start'=>$t['start_date'], 'end'=>$t['end_date'], 'url'=>admin_url('training_manager/event/'.$t['id']), 'color'=>($t['is_active']?'#2563eb':'#94a3b8')]; } echo json_encode($ev); }
+
+    public function bulk_email_certificates($id) {
+        if (!has_permission('training_manager', '', 'view')) access_denied();
+        $t = $this->training_model->get($id); $atts = $this->training_model->get_attendees($id);
+        $this->load->library('email'); $s = 0;
+        foreach($atts as $a){
+            if($a['status']==1 && $a['quiz_passed'] && $a['feedback_submitted']){
+                $pdf = $this->generate_certificate_pdf((object)$a, $t);
+                $this->email->clear(true); $this->email->from(get_option('smtp_email')); $this->email->to($a['email']);
+                $this->email->subject('Certificate: '.$t->subject); $this->email->message('Attached.');
+                $this->email->attach($pdf->Output('', 'S'), 'attachment', 'Cert.pdf', 'application/pdf');
+                if($this->email->send()) { $this->db->where('id', $a['id'])->update(db_prefix().'training_registrations', ['certificate_sent'=>1]); $s++; }
+            }
+        }
+        set_alert('success', "Sent $s certs"); redirect(admin_url('training_manager/event/'.$id));
+    }
 
     public function print_badges($id) {
         if (!class_exists('TCPDF')) $this->load->library('pdf');
