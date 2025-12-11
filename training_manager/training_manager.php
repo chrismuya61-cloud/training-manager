@@ -2,7 +2,7 @@
 /**
  * Module Name: Training Manager Enterprise
  * Description: Complete Training Management System with Group Booking, LMS, and Financials.
- * Version: 1.1.0
+ * Version: 3.0.0
  * Requires at least: 2.3.*
  */
 defined('BASEPATH') or exit('No direct script access allowed');
@@ -10,15 +10,40 @@ defined('BASEPATH') or exit('No direct script access allowed');
 hooks()->add_action('admin_init', 'training_manager_menu');
 hooks()->add_action('admin_init', 'training_manager_permissions');
 hooks()->add_action('before_cron_run', 'training_manager_reminders');
-hooks()->add_action('after_payment_added', 'training_manager_payment_recorded'); // CRITICAL: Payment Webhook
+hooks()->add_action('after_payment_added', 'training_manager_payment_recorded');
 
 function training_manager_menu() {
     $CI = &get_instance();
     if (has_permission('training_manager', '', 'view') || has_permission('training_manager', '', 'view_own')) {
-        $CI->app_menu->add_sidebar_menu_item('training_manager', ['name' => 'Training Manager', 'icon' => 'fa fa-graduation-cap', 'position' => 30,]);
-        $CI->app_menu->add_sidebar_menu_item('training_manager_events', ['name' => 'Events & Classes', 'icon' => 'fa fa-calendar', 'href' => admin_url('training_manager'), 'parent' => 'training_manager', 'position' => 1,]);
-        $CI->app_menu->add_sidebar_menu_item('training_manager_dashboard', ['name' => 'Dashboard & Reports', 'icon' => 'fa fa-bar-chart', 'href' => admin_url('training_manager/dashboard'), 'parent' => 'training_manager', 'position' => 2,]);
-        $CI->app_menu->add_sidebar_menu_item('training_manager_calendar', ['name' => 'Calendar', 'icon' => 'fa fa-calendar-alt', 'href' => admin_url('training_manager/calendar'), 'parent' => 'training_manager', 'position' => 3,]);
+        // FIX: Added href to parent item to allow direct navigation
+        $CI->app_menu->add_sidebar_menu_item('training_manager', [
+            'name'     => 'Training Manager',
+            'icon'     => 'fa fa-graduation-cap',
+            'position' => 30,
+            'href'     => admin_url('training_manager'), // <-- Fixes the "clicking doesn't open" issue
+        ]);
+        
+        $CI->app_menu->add_sidebar_menu_item('training_manager_events', [
+            'name'     => 'Events & Classes',
+            'icon'     => 'fa fa-calendar',
+            'href'     => admin_url('training_manager'),
+            'parent'   => 'training_manager',
+            'position' => 1,
+        ]);
+        $CI->app_menu->add_sidebar_menu_item('training_manager_dashboard', [
+            'name'     => 'Dashboard & Reports',
+            'icon'     => 'fa fa-bar-chart',
+            'href'     => admin_url('training_manager/dashboard'),
+            'parent'   => 'training_manager',
+            'position' => 2,
+        ]);
+        $CI->app_menu->add_sidebar_menu_item('training_manager_calendar', [
+            'name'     => 'Calendar',
+            'icon'     => 'fa fa-calendar-alt',
+            'href'     => admin_url('training_manager/calendar'),
+            'parent'   => 'training_manager',
+            'position' => 3,
+        ]);
     }
 }
 
@@ -54,9 +79,14 @@ function training_manager_reminders() {
 function training_manager_payment_recorded($payment_id) {
     $CI = &get_instance();
     $CI->load->model('payments_model');
+    $CI->load->model('invoices_model');
+    
     $payment = $CI->payments_model->get($payment_id);
     if(!$payment) return;
     
-    // CRITICAL FIX: Marks ALL registrations linked to the paid invoice as "Paid"
-    $CI->db->where('invoice_id', $payment->invoiceid)->update(db_prefix().'training_registrations', ['payment_status' => 'paid']);
+    // Check if the invoice is actually fully paid (Status 2 = Paid)
+    $invoice = $CI->invoices_model->get($payment->invoiceid);
+    if ($invoice && $invoice->status == 2) {
+        $CI->db->where('invoice_id', $payment->invoiceid)->update(db_prefix().'training_registrations', ['payment_status' => 'paid']);
+    }
 }
