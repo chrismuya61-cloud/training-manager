@@ -1,52 +1,42 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
 
+/*
+ * Migration for Version 3.0.0
+ * Adds Hybrid Events, Waitlist, Payment Status, and LMS Certification fields.
+ */
+
 $CI = &get_instance();
 
-// ======================================================
-// 1. TABLE: TRAININGS
-// ======================================================
+// 1. UPDATE 'tbltrainings' TABLE
 $table_trainings = db_prefix() . 'trainings';
 
-if (!$CI->db->table_exists($table_trainings)) {
-    $CI->db->query('CREATE TABLE `' . $table_trainings . '` (
-        `id` INT(11) NOT NULL AUTO_INCREMENT,
-        `subject` VARCHAR(200) NOT NULL,
-        `description` TEXT NULL,
-        `venue` VARCHAR(200) NULL,
-        `meeting_url` TEXT NULL,
-        `start_date` DATETIME NOT NULL,
-        `end_date` DATETIME NOT NULL,
-        `price` DECIMAL(15,2) DEFAULT 0.00,
-        `currency` INT(11) DEFAULT 1,
-        `assigned_staff_id` INT(11) NOT NULL,
-        `capacity` INT(11) DEFAULT 50,
-        `enable_waitlist` INT(1) DEFAULT 1,
-        `validity_months` INT(11) DEFAULT 0,
-        `confirmation_email` TEXT NULL,
-        `require_quiz` INT(1) DEFAULT 0,
-        `require_feedback` INT(1) DEFAULT 0,
-        `is_active` INT(1) DEFAULT 1,
-        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        PRIMARY KEY (`id`)
-    ) ENGINE=InnoDB DEFAULT CHARSET=' . $CI->db->char_set . ';');
-} else {
-    // UPGRADE: Add missing columns for v3.0.0
+if ($CI->db->table_exists($table_trainings)) {
+    
+    // Hybrid Event Link
     if (!$CI->db->field_exists('meeting_url', $table_trainings)) {
         $CI->db->query("ALTER TABLE `" . $table_trainings . "` ADD `meeting_url` TEXT NULL AFTER `venue`;");
     }
+
+    // Capacity & Waitlist
     if (!$CI->db->field_exists('capacity', $table_trainings)) {
         $CI->db->query("ALTER TABLE `" . $table_trainings . "` ADD `capacity` INT(11) DEFAULT 50 AFTER `assigned_staff_id`;");
     }
     if (!$CI->db->field_exists('enable_waitlist', $table_trainings)) {
         $CI->db->query("ALTER TABLE `" . $table_trainings . "` ADD `enable_waitlist` INT(1) DEFAULT 1 AFTER `capacity`;");
     }
+
+    // Certificate Validity
     if (!$CI->db->field_exists('validity_months', $table_trainings)) {
         $CI->db->query("ALTER TABLE `" . $table_trainings . "` ADD `validity_months` INT(11) DEFAULT 0 AFTER `enable_waitlist`;");
     }
+
+    // Custom Confirmation Email
     if (!$CI->db->field_exists('confirmation_email', $table_trainings)) {
         $CI->db->query("ALTER TABLE `" . $table_trainings . "` ADD `confirmation_email` TEXT NULL AFTER `validity_months`;");
     }
+
+    // LMS Requirements
     if (!$CI->db->field_exists('require_quiz', $table_trainings)) {
         $CI->db->query("ALTER TABLE `" . $table_trainings . "` ADD `require_quiz` INT(1) DEFAULT 0 AFTER `confirmation_email`;");
     }
@@ -55,51 +45,38 @@ if (!$CI->db->table_exists($table_trainings)) {
     }
 }
 
-// ======================================================
-// 2. TABLE: REGISTRATIONS
-// ======================================================
+// 2. UPDATE 'tbltraining_registrations' TABLE
 $table_regs = db_prefix() . 'training_registrations';
 
-if (!$CI->db->table_exists($table_regs)) {
-    $CI->db->query('CREATE TABLE `' . $table_regs . '` (
-        `id` INT(11) NOT NULL AUTO_INCREMENT,
-        `training_id` INT(11) NOT NULL,
-        `name` VARCHAR(150) NOT NULL,
-        `email` VARCHAR(150) NOT NULL,
-        `phonenumber` VARCHAR(50) NULL,
-        `company` VARCHAR(150) NULL,
-        `status` INT(1) DEFAULT 0 COMMENT "0=Registered, 1=Attended",
-        `attendance_mode` VARCHAR(20) DEFAULT "physical",
-        `is_waitlist` INT(1) DEFAULT 0,
-        `payment_status` VARCHAR(20) DEFAULT "unpaid",
-        `registration_source` VARCHAR(50) DEFAULT "manual",
-        `unique_ticket_code` VARCHAR(50) NOT NULL,
-        `referral_code_generated` VARCHAR(50) NULL,
-        `invoice_id` INT(11) DEFAULT 0,
-        `quiz_passed` INT(1) DEFAULT 0,
-        `feedback_submitted` INT(1) DEFAULT 0,
-        `certificate_sent` INT(1) DEFAULT 0,
-        `attendance_date` DATETIME NULL,
-        PRIMARY KEY (`id`)
-    ) ENGINE=InnoDB DEFAULT CHARSET=' . $CI->db->char_set . ';');
-} else {
-    // UPGRADE: Add missing columns for v3.0.0
+if ($CI->db->table_exists($table_regs)) {
+
+    // Attendance Mode (Physical/Online)
     if (!$CI->db->field_exists('attendance_mode', $table_regs)) {
         $CI->db->query("ALTER TABLE `" . $table_regs . "` ADD `attendance_mode` VARCHAR(20) DEFAULT 'physical' AFTER `status`;");
     }
+
+    // Waitlist Status
     if (!$CI->db->field_exists('is_waitlist', $table_regs)) {
         $CI->db->query("ALTER TABLE `" . $table_regs . "` ADD `is_waitlist` INT(1) DEFAULT 0 AFTER `attendance_mode`;");
     }
+
+    // Payment Tracking
     if (!$CI->db->field_exists('payment_status', $table_regs)) {
         $CI->db->query("ALTER TABLE `" . $table_regs . "` ADD `payment_status` VARCHAR(20) DEFAULT 'unpaid' AFTER `is_waitlist`;");
     }
     if (!$CI->db->field_exists('invoice_id', $table_regs)) {
         $CI->db->query("ALTER TABLE `" . $table_regs . "` ADD `invoice_id` INT(11) DEFAULT 0 AFTER `payment_status`;");
     }
+
+    // Unique Ticket Codes (Safety check: Generate if empty for existing rows?)
     if (!$CI->db->field_exists('unique_ticket_code', $table_regs)) {
-        // If updating from very old version, generate a default unique code to prevent errors
-        $CI->db->query("ALTER TABLE `" . $table_regs . "` ADD `unique_ticket_code` VARCHAR(50) NOT NULL DEFAULT 'LEGACY' AFTER `registration_source`;");
+        $CI->db->query("ALTER TABLE `" . $table_regs . "` ADD `unique_ticket_code` VARCHAR(50) NOT NULL AFTER `registration_source`;");
     }
+    if (!$CI->db->field_exists('referral_code_generated', $table_regs)) {
+        $CI->db->query("ALTER TABLE `" . $table_regs . "` ADD `referral_code_generated` VARCHAR(50) NULL AFTER `unique_ticket_code`;");
+    }
+
+    // Certification Progress
     if (!$CI->db->field_exists('quiz_passed', $table_regs)) {
         $CI->db->query("ALTER TABLE `" . $table_regs . "` ADD `quiz_passed` INT(1) DEFAULT 0 AFTER `invoice_id`;");
     }
@@ -109,14 +86,14 @@ if (!$CI->db->table_exists($table_regs)) {
     if (!$CI->db->field_exists('certificate_sent', $table_regs)) {
         $CI->db->query("ALTER TABLE `" . $table_regs . "` ADD `certificate_sent` INT(1) DEFAULT 0 AFTER `feedback_submitted`;");
     }
+    
+    // Attendance Date Timestamp
     if (!$CI->db->field_exists('attendance_date', $table_regs)) {
         $CI->db->query("ALTER TABLE `" . $table_regs . "` ADD `attendance_date` DATETIME NULL AFTER `certificate_sent`;");
     }
 }
 
-// ======================================================
-// 3. REMAINING TABLES (Create if missing)
-// ======================================================
+// 3. CREATE NEW TABLES IF MISSING (For older versions that might lack them entirely)
 
 // Quiz Questions
 if (!$CI->db->table_exists(db_prefix() . 'training_quiz_questions')) {
