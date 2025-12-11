@@ -48,6 +48,15 @@ class Training_model extends App_Model
     }
 
     public function add_walkin($data) {
+        // FIX: Check for duplicate email in this training
+        $this->db->where('training_id', $data['training_id']);
+        $this->db->where('email', $data['email']);
+        $exists = $this->db->count_all_results(db_prefix().'training_registrations');
+
+        if ($exists > 0) {
+            return false; // Duplicate found
+        }
+
         $data['unique_ticket_code'] = 'TKT-'.strtoupper(substr(md5(uniqid(rand(),true)),0,8));
         $data['referral_code_generated'] = substr(md5($data['email'].uniqid()),0,8);
         $data['attendance_date'] = date('Y-m-d H:i:s');

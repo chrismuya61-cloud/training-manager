@@ -13,13 +13,7 @@ class Client extends ClientsController
     public function register($id) {
         $data['training'] = $this->db->where('id', $id)->get(db_prefix().'trainings')->row();
         if(!$data['training']) show_404();
-        
-        // FIX: Check if training is active/open
-        if($data['training']->is_active == 0) {
-            show_error('This training event is currently closed for registration.', 403, 'Registration Closed');
-            return;
-        }
-
+        if($data['training']->is_active == 0) { show_error('This training event is currently closed for registration.', 403, 'Registration Closed'); return; }
         $this->load->view('training_manager/public_register', $data);
     }
 
@@ -27,7 +21,6 @@ class Client extends ClientsController
         $data = $this->input->post();
         $t = $this->db->where('id', $data['training_id'])->get(db_prefix().'trainings')->row();
         
-        // FIX: Prevent submission if closed
         if(!$t || $t->is_active == 0) {
             set_alert('danger', 'Registration is closed for this event.');
             redirect($_SERVER['HTTP_REFERER']);
@@ -37,71 +30,58 @@ class Client extends ClientsController
         $attendees = [];
         $billing_info = '';
 
-        // 1. Data Extraction & Basic Validation
         if($reg_type == 'individual') {
             if(!empty(trim($data['ind_name'])) && !empty(trim($data['ind_email']))) {
-                $attendees[] = [
-                    'name' => trim($data['ind_name']), 
-                    'email' => trim($data['ind_email']), 
-                    'phone' => $data['ind_phone'], 
-                    'company' => $data['ind_company']??''
-                ];
+                $attendees[] = ['name' => trim($data['ind_name']), 'email' => trim($data['ind_email']), 'phone' => $data['ind_phone'], 'company' => $data['ind_company']??''];
                 $billing_info = $data['ind_name'] . ' (' . $data['ind_email'] . ')';
             }
         } else {
             if(isset($data['attendees']) && is_array($data['attendees'])){
                 foreach($data['attendees'] as $a){
-                    // FIX: Filter out blank entries
                     if(!empty(trim($a['name'])) && !empty(trim($a['email']))) {
-                        $attendees[] = [
-                            'name' => trim($a['name']), 
-                            'email' => trim($a['email']), 
-                            'phone' => $a['phone']??'', 
-                            'company' => $data['group_company']
-                        ];
+                        $attendees[] = ['name' => trim($a['name']), 'email' => trim($a['email']), 'phone' => $a['phone']??'', 'company' => $data['group_company']];
                     }
                 }
             }
             $billing_info = $data['group_company'] . ' - Contact: ' . $data['group_email'];
         }
 
-        // FIX: strict check for empty valid attendees
-        if(empty($attendees)) { 
-            set_alert('danger','Please provide valid attendee details (Name and Email are required).'); 
-            redirect($_SERVER['HTTP_REFERER']); 
-        }
+        if(empty($attendees)) { set_alert('danger','Please provide valid attendee details (Name and Email are required).'); redirect($_SERVER['HTTP_REFERER']); }
 
-        // 2. Waitlist Check
         $curr = $this->db->where('training_id', $t->id)->count_all_results(db_prefix().'training_registrations');
-        $new_count = count($attendees);
-        $is_waitlist = ($t->enable_waitlist && ($curr + $new_count) > $t->capacity) ? 1 : 0;
+        $is_waitlist = ($t->enable_waitlist && ($curr + count($attendees)) > $t->capacity) ? 1 : 0;
 
-        // 3. Database Insert Loop
         $created_reg_ids = [];
+        $duplicates = 0;
+
         foreach($attendees as $person) {
             $insert_data = [
-                'training_id' => $t->id,
-                'name' => $person['name'],
-                'email' => $person['email'],
-                'phonenumber' => $person['phone'],
-                'company' => $person['company'],
-                'status' => 0, 
-                'attendance_mode' => $data['attendance_mode'],
-                'is_waitlist' => $is_waitlist
+                'training_id' => $t->id, 'name' => $person['name'], 'email' => $person['email'], 
+                'phonenumber' => $person['phone'], 'company' => $person['company'], 'status' => 0, 
+                'attendance_mode' => $data['attendance_mode'], 'is_waitlist' => $is_waitlist
             ];
-            $created_reg_ids[] = $this->training_model->add_walkin($insert_data);
+            
+            // FIX: Check return value
+            $reg_id = $this->training_model->add_walkin($insert_data);
+            if($reg_id) {
+                $created_reg_ids[] = $reg_id;
+            } else {
+                $duplicates++;
+            }
         }
 
-        // 4. Waitlist Response
+        if(empty($created_reg_ids) && $duplicates > 0) {
+            set_alert('warning', 'All attendees were already registered for this event.');
+            redirect($_SERVER['HTTP_REFERER']);
+        }
+
         if($is_waitlist) {
             $this->load->view('training_manager/public_success', ['training'=>$t, 'status'=>'waitlist']);
             return;
         }
 
-        // 5. Invoicing
         if($t->price > 0 && !empty($created_reg_ids)) {
             $this->load->model('invoices_model');
-            
             $qty = count($created_reg_ids);
             $total_cost = $t->price * $qty;
             
@@ -127,10 +107,10 @@ class Client extends ClientsController
             }
         }
 
-        // 6. Free Event Success
         $this->load->view('training_manager/public_success', ['training'=>$t, 'status'=>'confirmed']);
     }
 
+    // --- 2. LMS PORTAL & QUIZ/FEEDBACK ---
     public function portal($ticket_code) {
         $reg = $this->db->where('unique_ticket_code', $ticket_code)->get(db_prefix().'training_registrations')->row();
         if(!$reg) show_404();
