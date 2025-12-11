@@ -11,7 +11,7 @@
         .register-card { background: white; max-width: 750px; width: 100%; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.08); }
         .card-header { background: linear-gradient(135deg, #0f172a 0%, #334155 100%); padding: 35px; color: white; text-align: center; }
         .card-body { padding: 40px; }
-        .form-control { margin-bottom: 15px; background: #f8fafc; border: 1px solid #cbd5e1; height: 45px; }
+        .form-control { margin-bottom: 15px; background: #f8fafc; border: 1px solid #cbd5e1; height: 45px; width: 100%; display: block; }
         .form-control:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
         .btn-register { background: #2563eb; color: white; width: 100%; padding: 14px; border-radius: 8px; border: none; font-weight: bold; margin-top: 15px; transition: 0.2s; font-size: 16px; }
         .btn-register:hover { background: #1d4ed8; }
@@ -19,12 +19,14 @@
         .type-option { flex: 1; text-align: center; padding: 12px; cursor: pointer; border-radius: 8px; font-weight: 600; color: #64748b; transition: 0.2s; }
         .type-option.active { background: #fff; color: #2563eb; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .attendee-row { background: #f8fafc; border: 1px solid #e2e8f0; padding: 20px; border-radius: 12px; margin-bottom: 15px; position: relative; }
-        .remove-row { position: absolute; top: 10px; right: 15px; color: #ef4444; cursor: pointer; font-size: 1.2rem; font-weight: bold; }
+        .remove-row { position: absolute; top: 15px; right: 15px; color: #ef4444; cursor: pointer; font-size: 1.2rem; font-weight: bold; z-index: 10; }
         .add-btn { background: #eff6ff; color: #2563eb; border: 2px dashed #bfdbfe; width: 100%; padding: 12px; border-radius: 10px; font-weight: 600; margin-top: 10px; transition: 0.2s; }
         .add-btn:hover { background: #dbeafe; border-color: #2563eb; }
         /* Logo Fix */
         .logo-container img { max-height: 40px; }
         .logo-container { filter: brightness(0) invert(1); margin-bottom: 15px; }
+        /* Label spacing */
+        label { font-weight: 600; margin-bottom: 5px; display: block; color: #334155; }
     </style>
 </head>
 <body>
@@ -55,29 +57,52 @@
             <input type="hidden" name="registration_type" id="registration_type" value="individual">
 
             <div id="individual-section">
-                <div class="row">
-                    <div class="col-md-6"><label>Full Name <span class="text-danger">*</span></label><input type="text" name="ind_name" class="form-control" placeholder="John Doe"></div>
-                    <div class="col-md-6"><label>Phone Number <span class="text-danger">*</span></label><input type="text" name="ind_phone" class="form-control" placeholder="+254..."></div>
+                <div class="form-group">
+                    <label>Full Name <span class="text-danger">*</span></label>
+                    <input type="text" name="ind_name" class="form-control" placeholder="John Doe">
                 </div>
-                <label>Email Address <span class="text-danger">*</span></label><input type="email" name="ind_email" class="form-control" placeholder="john@example.com">
-                <label>Company / Organization</label><input type="text" name="ind_company" class="form-control" placeholder="Acme Corp">
+                <div class="form-group">
+                    <label>Email Address <span class="text-danger">*</span></label>
+                    <input type="email" name="ind_email" class="form-control" placeholder="john@example.com">
+                </div>
+                <div class="form-group">
+                    <label>Phone Number <span class="text-danger">*</span></label>
+                    <input type="text" name="ind_phone" class="form-control" placeholder="+254...">
+                </div>
+                <div class="form-group">
+                    <label>Company / Organization</label>
+                    <input type="text" name="ind_company" class="form-control" placeholder="Acme Corp">
+                </div>
             </div>
 
             <div id="group-section" style="display:none;">
                 <div style="background: #fff7ed; border:1px solid #fed7aa; padding:20px; border-radius:12px; margin-bottom:25px;">
-                    <h5 style="margin-top:0; font-weight:700; color:#9a3412; margin-bottom:15px;">Billing Contact</h5>
-                    <div class="row">
-                        <div class="col-md-6"><label>Company Name <span class="text-danger">*</span></label><input type="text" name="group_company" class="form-control" placeholder="Company Name"></div>
-                        <div class="col-md-6"><label>Contact Email <span class="text-danger">*</span></label><input type="email" name="group_email" class="form-control" placeholder="billing@company.com"></div>
+                    <h5 style="margin-top:0; font-weight:700; color:#9a3412; margin-bottom:15px; border-bottom: 1px solid #fed7aa; padding-bottom: 10px;">Billing Contact</h5>
+                    
+                    <div class="form-group">
+                        <label>Company Name <span class="text-danger">*</span></label>
+                        <input type="text" name="group_company" class="form-control" placeholder="Company Name">
+                    </div>
+                    <div class="form-group">
+                        <label>Contact Email <span class="text-danger">*</span></label>
+                        <input type="email" name="group_email" class="form-control" placeholder="billing@company.com">
                     </div>
                 </div>
+
                 <h5 style="font-weight:700; color:#1e293b; margin-bottom:15px;">Attendees List</h5>
                 <div id="attendees-container">
                     <div class="attendee-row">
-                        <div class="row">
-                            <div class="col-md-4"><small class="text-muted">Name</small><input type="text" name="attendees[0][name]" class="form-control m-0" required></div>
-                            <div class="col-md-4"><small class="text-muted">Email</small><input type="email" name="attendees[0][email]" class="form-control m-0" required></div>
-                            <div class="col-md-4"><small class="text-muted">Phone</small><input type="text" name="attendees[0][phone]" class="form-control m-0"></div>
+                        <div class="form-group">
+                            <label class="small text-muted">Name</label>
+                            <input type="text" name="attendees[0][name]" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="small text-muted">Email</label>
+                            <input type="email" name="attendees[0][email]" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="small text-muted">Phone</label>
+                            <input type="text" name="attendees[0][phone]" class="form-control">
                         </div>
                     </div>
                 </div>
@@ -86,8 +111,8 @@
 
             <?php if(!empty($training->venue) && !empty($training->meeting_url)){ ?>
                 <div class="form-group" style="margin-top: 25px; background: #f0fdf4; padding: 15px; border: 1px solid #bbf7d0; border-radius: 8px;">
-                    <label style="color:#166534; font-weight:bold;">How will you attend?</label>
-                    <select name="attendance_mode" class="form-control m-0">
+                    <label style="color:#166534; font-weight:bold; display:block; margin-bottom:10px;">How will you attend?</label>
+                    <select name="attendance_mode" class="form-control" style="width:100%;">
                         <option value="physical">🏢 Physically at <?php echo $training->venue; ?></option>
                         <option value="online">💻 Online via Zoom/Teams</option>
                     </select>
@@ -129,9 +154,26 @@
     }
     let attendeeCount = 1;
     function addAttendee() {
-        const div = document.createElement('div'); div.className = 'attendee-row';
-        div.innerHTML = `<span class="remove-row" onclick="this.parentElement.remove()">×</span><div class="row"><div class="col-md-4"><small class="text-muted">Name</small><input type="text" name="attendees[${attendeeCount}][name]" class="form-control m-0" required></div><div class="col-md-4"><small class="text-muted">Email</small><input type="email" name="attendees[${attendeeCount}][email]" class="form-control m-0" required></div><div class="col-md-4"><small class="text-muted">Phone</small><input type="text" name="attendees[${attendeeCount}][phone]" class="form-control m-0"></div></div>`;
-        document.getElementById('attendees-container').appendChild(div); attendeeCount++;
+        const div = document.createElement('div'); 
+        div.className = 'attendee-row';
+        // Updated innerHTML to use full-width stacked inputs
+        div.innerHTML = `
+            <span class="remove-row" onclick="this.parentElement.remove()">×</span>
+            <div class="form-group">
+                <label class="small text-muted">Name</label>
+                <input type="text" name="attendees[${attendeeCount}][name]" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label class="small text-muted">Email</label>
+                <input type="email" name="attendees[${attendeeCount}][email]" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label class="small text-muted">Phone</label>
+                <input type="text" name="attendees[${attendeeCount}][phone]" class="form-control">
+            </div>
+        `;
+        document.getElementById('attendees-container').appendChild(div); 
+        attendeeCount++;
     }
     document.addEventListener('DOMContentLoaded', () => switchType('individual'));
 </script>
