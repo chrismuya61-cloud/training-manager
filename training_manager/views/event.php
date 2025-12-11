@@ -4,9 +4,25 @@
     <div class="content">
         <div class="row">
             <div class="col-md-12">
-                <h4 class="bold"><?php echo $title; ?></h4>
                 <div class="panel_s">
                     <div class="panel-body">
+                        <div class="row">
+                            <div class="col-md-6"><h4 class="bold no-margin"><?php echo $title; ?></h4></div>
+                            <div class="col-md-6 text-right">
+                                <?php if(isset($event)){ ?>
+                                    <div class="btn-group">
+                                        <?php if($event->is_active == 1){ ?>
+                                            <a href="<?php echo admin_url('training_manager/mark_status/'.$event->id.'/0'); ?>" class="btn btn-danger btn-sm"><i class="fa fa-ban"></i> Close Event</a>
+                                        <?php } else { ?>
+                                            <a href="<?php echo admin_url('training_manager/mark_status/'.$event->id.'/1'); ?>" class="btn btn-success btn-sm"><i class="fa fa-check"></i> Re-Open Event</a>
+                                        <?php } ?>
+                                        <a href="<?php echo admin_url('training_manager/sync_expenses/'.$event->id); ?>" class="btn btn-warning btn-sm" onclick="return confirm('Sync all local training expenses to the main Expense module?');"><i class="fa fa-refresh"></i> Sync Expenses</a>
+                                    </div>
+                                <?php } ?>
+                            </div>
+                        </div>
+                        <hr>
+
                         <div class="horizontal-scrollable-tabs">
                             <div class="scroller arrow-left"><i class="fa fa-angle-left"></i></div>
                             <div class="scroller arrow-right"><i class="fa fa-angle-right"></i></div>
@@ -141,7 +157,9 @@
                                             <div style="border:1px solid #eee; padding:10px; border-radius:4px; height:180px; position:relative;">
                                                 <div style="height:100px; display:flex; align-items:center; justify-content:center; overflow:hidden; margin-bottom:10px;">
                                                     <?php if($is_img){ ?>
-                                                        <a href="<?php echo $url; ?>" target="_blank"><img src="<?php echo $url; ?>" class="img-responsive" style="max-height:100px;"></a>
+                                                        <a href="<?php echo $url; ?>" target="_blank">
+                                                            <img src="<?php echo $url; ?>" class="img-responsive" style="max-height:100px;">
+                                                        </a>
                                                     <?php } else { ?>
                                                         <i class="fa fa-file-text-o fa-4x text-muted"></i>
                                                     <?php } ?>
