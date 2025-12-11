@@ -150,11 +150,24 @@ class Training_manager extends AdminController
         
         $t = $this->training_model->get($data['training_id']);
         if($t->price > 0 && !empty($data['email'])) {
+            // FIX: Added 'long_description', 'unit', 'order' to invoice items to prevent PHP Warnings
             $this->invoices_model->add([
-                'clientid'=>0, 'number'=>get_option('next_invoice_number'), 'date'=>date('Y-m-d'), 'duedate'=>date('Y-m-d'), 
-                'currency'=>$t->currency, 'subtotal'=>$t->price, 'total'=>$t->price, 
+                'clientid'=>0, 
+                'number'=>get_option('next_invoice_number'), 
+                'date'=>date('Y-m-d'), 
+                'duedate'=>date('Y-m-d'), 
+                'currency'=>$t->currency, 
+                'subtotal'=>$t->price, 
+                'total'=>$t->price, 
                 'billing_street'=>$data['name'], 
-                'newitems'=>[['description'=>'Training Ticket', 'qty'=>1, 'rate'=>$t->price]]
+                'newitems'=>[[
+                    'description'=>'Training Ticket', 
+                    'long_description'=>'Registration for ' . $data['name'], 
+                    'qty'=>1, 
+                    'rate'=>$t->price,
+                    'unit'=>'Ticket',
+                    'order'=>1
+                ]]
             ]);
         }
         set_alert('success', 'Walk-in Added'); redirect($_SERVER['HTTP_REFERER']);
@@ -285,7 +298,7 @@ class Training_manager extends AdminController
     }
 
     private function generate_certificate_pdf($att, $training) {
-        if (!class_exists('TCPDF')) $this->load->library('pdf');
+        if (!class_exists('TCPDF')) { $this->load->library('pdf'); }
         $pdf = new TCPDF('L', 'mm', 'A4', true, 'UTF-8', false);
         $pdf->SetPrintHeader(false); $pdf->SetPrintFooter(false); $pdf->SetAutoPageBreak(false); $pdf->AddPage();
         $path = module_dir_path('training_manager', 'assets/');

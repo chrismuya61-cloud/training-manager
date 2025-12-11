@@ -73,14 +73,20 @@ class Client extends ClientsController
             $qty = count($created_reg_ids);
             $total_cost = $t->price * $qty;
             
+            // FIX: Added 'long_description', 'unit', and 'order' keys here too
             $new_invoice_data = [
                 'clientid' => 0, 'number' => get_option('next_invoice_number'), 'date' => date('Y-m-d'), 'duedate' => date('Y-m-d'),
                 'currency' => $t->currency, 'subtotal' => $total_cost, 'total' => $total_cost,
                 'billing_street' => $billing_info,
                 'show_quantity_as' => 1,
-                'newitems' => [
-                    ['description' => 'Training: '.$t->subject.' ('.$qty.' Attendees)', 'long_description' => 'Attendees: ' . implode(', ', array_column($attendees, 'name')), 'qty' => $qty, 'rate' => $t->price, 'unit' => 'Ticket']
-                ]
+                'newitems' => [[
+                    'description' => 'Training: '.$t->subject.' ('.$qty.' Attendees)',
+                    'long_description' => 'Attendees: ' . implode(', ', array_column($attendees, 'name')),
+                    'qty' => $qty,
+                    'rate' => $t->price,
+                    'unit' => 'Ticket',
+                    'order' => 1
+                ]]
             ];
 
             $invoice_id = $this->invoices_model->add($new_invoice_data);
