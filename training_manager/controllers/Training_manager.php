@@ -27,7 +27,6 @@ class Training_manager extends AdminController
                 $e_ids = array_column($s_events, 'id');
                 $atts = $this->db->where_in('training_id', $e_ids)->where('status', 1)->count_all_results(db_prefix().'training_registrations');
                 
-                // Safe query for rating
                 $query = "SELECT AVG(rating) as r FROM ".db_prefix()."training_feedback 
                           JOIN ".db_prefix()."training_registrations ON ".db_prefix()."training_registrations.id=".db_prefix()."training_feedback.registration_id 
                           WHERE training_id IN (".implode(',',$e_ids).")";
@@ -113,7 +112,7 @@ class Training_manager extends AdminController
         fclose($fp); exit;
     }
 
-    // --- 3. EVENT CRUD ---
+    // --- 3. CRUD ---
     public function event($id = '') {
         if ($this->input->post()) {
             if ($id == '') { 
@@ -145,7 +144,7 @@ class Training_manager extends AdminController
     public function add_walkin() {
         if(!has_permission('training_manager','','edit')) access_denied();
         $data = $this->input->post(); 
-        $data['status'] = 1; // Mark as attended
+        $data['status'] = 1; 
         $reg_id = $this->training_model->add_walkin($data);
         
         $t = $this->training_model->get($data['training_id']);
@@ -185,19 +184,32 @@ class Training_manager extends AdminController
         set_alert('success', 'Rescheduled'); redirect($_SERVER['HTTP_REFERER']);
     }
 
+    // --- 5. SYNC TO LEADS (FIXED FOR UNDEFINED KEYS) ---
     public function sync_to_leads($id) {
         if(!has_permission('leads','','create')) access_denied();
         $attendees = $this->training_model->get_attendees($id); $this->load->model('leads_model');
+        
         // Get Source ID
-        $this->db->where('name', 'Training Event'); $src = $this->db->get(db_prefix().'leads_sources')->row(); $sid = $src ? $src->id : 1;
+        $this->db->where('name', 'Training Event'); 
+        $src = $this->db->get(db_prefix().'leads_sources')->row(); 
+        $sid = $src ? $src->id : 1;
         
         $count = 0;
         foreach($attendees as $att){
             if(!$this->db->where('email', $att['email'])->get(db_prefix().'leads')->row()){
+                // FIX: Added 'description', 'address', and 'assigned' to prevent PHP Errors
                 $this->leads_model->add([
-                    'name'=>$att['name'], 'email'=>$att['email'], 'phonenumber'=>$att['phonenumber'], 
-                    'company'=>$att['company'], 'source'=>$sid, 'status'=>1, 
-                    'dateadded'=>date('Y-m-d H:i:s'), 'addedfrom'=>get_staff_user_id()
+                    'name'        => $att['name'], 
+                    'email'       => $att['email'], 
+                    'phonenumber' => $att['phonenumber'], 
+                    'company'     => $att['company'], 
+                    'source'      => $sid, 
+                    'status'      => 1, 
+                    'description' => 'Imported from Training Manager', // Added default
+                    'address'     => '', // Added default
+                    'assigned'    => get_staff_user_id(), // Added default (Assign to current user)
+                    'dateadded'   => date('Y-m-d H:i:s'), 
+                    'addedfrom'   => get_staff_user_id()
                 ]);
                 $count++;
             }
@@ -205,7 +217,7 @@ class Training_manager extends AdminController
         set_alert('success', "Synced $count Leads"); redirect(admin_url('training_manager/event/'.$id));
     }
 
-    // --- 5. IMPORT, UPLOAD, UTILS ---
+    // --- 6. UTILS, IMPORT, MEDIA ---
     public function import_attendees($id) { 
         if(isset($_FILES['file_csv']['name']) && $_FILES['file_csv']['name'] != ''){ 
             $file = $_FILES['file_csv']['tmp_name']; 
@@ -270,12 +282,9 @@ class Training_manager extends AdminController
         redirect($_SERVER['HTTP_REFERER']); 
     }
 
-    // --- 6. ADD QUESTION (FIXED) ---
     public function add_question($id) { 
-        // FIX: Insert ID into the data array before saving
         $data = $this->input->post();
         $data['training_id'] = $id; 
-        
         $this->db->insert(db_prefix().'training_quiz_questions', $data); 
         redirect($_SERVER['HTTP_REFERER']); 
     }
@@ -284,7 +293,6 @@ class Training_manager extends AdminController
     public function add_expense() { $this->training_model->add_expense($this->input->post()); redirect($_SERVER['HTTP_REFERER']); }
     public function delete_event($id) { $this->training_model->delete($id); redirect(admin_url('training_manager')); }
     
-    // --- 7. CALENDAR & CERTIFICATES ---
     public function calendar() { $data['title']='Training Calendar'; $this->load->view('calendar', $data); }
     public function get_calendar_data() { $ts=$this->training_model->get_all(); $ev=[]; foreach($ts as $t){ $ev[]=['title'=>$t['subject'], 'start'=>$t['start_date'], 'end'=>$t['end_date'], 'url'=>admin_url('training_manager/event/'.$t['id']), 'color'=>($t['is_active']?'#2563eb':'#94a3b8')]; } echo json_encode($ev); }
 
