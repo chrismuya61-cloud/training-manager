@@ -109,7 +109,6 @@ class Training_manager extends AdminController
         if(!has_permission('expenses','','create')) access_denied();
         $expenses = $this->db->where('training_id', $id)->get(db_prefix().'training_expenses')->result();
         
-        // Find or Create "Training" category
         $cat = $this->db->where('name', 'Training')->get(db_prefix().'expenses_categories')->row();
         if(!$cat) {
             $this->db->insert(db_prefix().'expenses_categories', ['name'=>'Training', 'description'=>'Imported from Training Manager']);
@@ -121,7 +120,6 @@ class Training_manager extends AdminController
         $count = 0;
         $this->load->model('expenses_model');
         foreach($expenses as $exp) {
-            // Check if expense roughly exists (by name and date) to prevent dups
             $exists = $this->db->where('expense_name', $exp->expense_name)->where('date', $exp->date_added)->where('amount', $exp->amount)->get(db_prefix().'expenses')->row();
             if(!$exists) {
                 $this->expenses_model->add([
@@ -132,8 +130,7 @@ class Training_manager extends AdminController
                 $count++;
             }
         }
-        set_alert('success', "Synced $count Expenses to Core Module");
-        redirect($_SERVER['HTTP_REFERER']);
+        set_alert('success', "Synced $count Expenses to Core Module"); redirect($_SERVER['HTTP_REFERER']);
     }
 
     public function sync_to_leads($id) {
@@ -160,9 +157,7 @@ class Training_manager extends AdminController
         if(!has_permission('training_manager','','edit')) access_denied();
         $data = $this->input->post(); $data['status'] = 1; 
         
-        // FIX: Check for duplicate return value
         $reg_id = $this->training_model->add_walkin($data);
-        
         if($reg_id === false) {
             set_alert('warning', 'This user is already registered for this event.');
             redirect($_SERVER['HTTP_REFERER']);
@@ -198,14 +193,12 @@ class Training_manager extends AdminController
             while(($data = fgetcsv($handle, 1000, ",")) !== FALSE){ 
                 if($row == 0 && strtolower($data[0]) == 'name') { $row++; continue; }
                 if(!empty($data[0]) && !empty($data[1])) {
-                    // FIX: Check for duplicates
                     $res = $this->training_model->add_walkin(['training_id'=>$id, 'name'=>$data[0], 'email'=>$data[1], 'phonenumber'=>$data[2]??'', 'company'=>$data[3]??'', 'status'=>0, 'registration_source'=>'import']);
                     if($res) $success++; else $dup++;
                 }
                 $row++;
             } 
-            fclose($handle); 
-            set_alert('success', "Imported $success attendees. Skipped $dup duplicates.");
+            fclose($handle); set_alert('success', "Imported $success attendees. Skipped $dup duplicates.");
         } 
         redirect(admin_url('training_manager/event/'.$id)); 
     }
@@ -231,21 +224,28 @@ class Training_manager extends AdminController
     public function delete_question($id) { $this->db->where('id',$id)->delete(db_prefix().'training_quiz_questions'); redirect($_SERVER['HTTP_REFERER']); }
     public function add_expense() { $this->training_model->add_expense($this->input->post()); redirect($_SERVER['HTTP_REFERER']); }
     public function delete_event($id) { $this->training_model->delete($id); redirect(admin_url('training_manager')); }
+    
+    // --- CALENDAR DATA (FIXED) ---
     public function calendar() { $data['title']='Training Calendar'; $this->load->view('calendar', $data); }
     public function get_calendar_data() { 
         $ts=$this->training_model->get_all(); 
         $ev=[]; 
         foreach($ts as $t){ 
             $ev[]=[
-                'title'=>$t['subject'], 
-                'start'=>date('c', strtotime($t['start_date'])), 
-                'end'=>date('c', strtotime($t['end_date'])), 
-                'url'=>admin_url('training_manager/event/'.$t['id']), 
-                'color'=>($t['is_active']?'#2563eb':'#94a3b8')
+                'title' => $t['subject'], 
+                'start' => date('c', strtotime($t['start_date'])), 
+                'end'   => date('c', strtotime($t['end_date'])), 
+                'url'   => admin_url('training_manager/event/'.$t['id']), 
+                'color' => ($t['is_active']?'#2563eb':'#94a3b8'),
+                'extendedProps' => [
+                    'venue' => $t['venue'],
+                    'status' => ($t['is_active']?'Active':'Closed')
+                ]
             ]; 
         } 
         header('Content-Type: application/json');
-        echo json_encode($ev); 
+        echo json_encode($ev);
+        die(); // CRITICAL: Stop further output to ensure valid JSON
     }
 
     public function bulk_email_certificates($id) {
