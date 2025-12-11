@@ -11,33 +11,67 @@ class Client extends ClientsController
 
     // --- 1. PUBLIC REGISTRATION & SUBMISSION ---
     public function register($id) {
-        $data['training'] = $this->db->where('id', $id)->get(db_prefix().'trainings')->row();
-        if(!$data['training']) show_404();
+        $training = $this->db->where('id', $id)->get(db_prefix().'trainings')->row();
+        
+        if(!$training) show_404();
+        
+        // FIX: Check if training is active/open
+        if($training->is_active == 0) {
+            show_error('This training event is currently closed for registration.', 403, 'Registration Closed');
+            return;
+        }
+
+        $data['training'] = $training;
         $this->load->view('training_manager/public_register', $data);
     }
 
     public function public_submit() {
         $data = $this->input->post();
         $t = $this->db->where('id', $data['training_id'])->get(db_prefix().'trainings')->row();
-        $reg_type = $data['registration_type'];
         
+        // FIX: Prevent submission if closed
+        if(!$t || $t->is_active == 0) {
+            set_alert('danger', 'Registration is closed for this event.');
+            redirect($_SERVER['HTTP_REFERER']);
+        }
+
+        $reg_type = $data['registration_type'];
         $attendees = [];
         $billing_info = '';
 
-        // 1. Data Extraction (Group vs Individual)
+        // 1. Data Extraction & Basic Validation
         if($reg_type == 'individual') {
-            $attendees[] = ['name'=>$data['ind_name'], 'email'=>$data['ind_email'], 'phone'=>$data['ind_phone'], 'company'=>$data['ind_company']??''];
-            $billing_info = $data['ind_name'] . ' (' . $data['ind_email'] . ')';
+            if(!empty(trim($data['ind_name'])) && !empty(trim($data['ind_email']))) {
+                $attendees[] = [
+                    'name' => trim($data['ind_name']), 
+                    'email' => trim($data['ind_email']), 
+                    'phone' => $data['ind_phone'], 
+                    'company' => $data['ind_company']??''
+                ];
+                $billing_info = $data['ind_name'] . ' (' . $data['ind_email'] . ')';
+            }
         } else {
             if(isset($data['attendees']) && is_array($data['attendees'])){
                 foreach($data['attendees'] as $a){
-                    if(!empty($a['name']) && !empty($a['email'])) $attendees[] = ['name'=>$a['name'], 'email'=>$a['email'], 'phone'=>$a['phone']??'', 'company'=>$data['group_company']];
+                    // FIX: Filter out blank entries
+                    if(!empty(trim($a['name'])) && !empty(trim($a['email']))) {
+                        $attendees[] = [
+                            'name' => trim($a['name']), 
+                            'email' => trim($a['email']), 
+                            'phone' => $a['phone']??'', 
+                            'company' => $data['group_company']
+                        ];
+                    }
                 }
             }
             $billing_info = $data['group_company'] . ' - Contact: ' . $data['group_email'];
         }
 
-        if(empty($attendees)) { set_alert('danger','No attendees provided.'); redirect($_SERVER['HTTP_REFERER']); }
+        // FIX: strict check for empty valid attendees
+        if(empty($attendees)) { 
+            set_alert('danger','Please provide valid attendee details (Name and Email are required).'); 
+            redirect($_SERVER['HTTP_REFERER']); 
+        }
 
         // 2. Waitlist Check
         $curr = $this->db->where('training_id', $t->id)->count_all_results(db_prefix().'training_registrations');
@@ -66,14 +100,13 @@ class Client extends ClientsController
             return;
         }
 
-        // 5. Invoicing (One Invoice for All Attendees)
+        // 5. Invoicing
         if($t->price > 0 && !empty($created_reg_ids)) {
             $this->load->model('invoices_model');
             
             $qty = count($created_reg_ids);
             $total_cost = $t->price * $qty;
             
-            // FIX: Added 'long_description', 'unit', and 'order' keys here too
             $new_invoice_data = [
                 'clientid' => 0, 'number' => get_option('next_invoice_number'), 'date' => date('Y-m-d'), 'duedate' => date('Y-m-d'),
                 'currency' => $t->currency, 'subtotal' => $total_cost, 'total' => $total_cost,
@@ -82,10 +115,7 @@ class Client extends ClientsController
                 'newitems' => [[
                     'description' => 'Training: '.$t->subject.' ('.$qty.' Attendees)',
                     'long_description' => 'Attendees: ' . implode(', ', array_column($attendees, 'name')),
-                    'qty' => $qty,
-                    'rate' => $t->price,
-                    'unit' => 'Ticket',
-                    'order' => 1
+                    'qty' => $qty, 'rate' => $t->price, 'unit' => 'Ticket', 'order' => 1
                 ]]
             ];
 
@@ -131,7 +161,7 @@ class Client extends ClientsController
         redirect($_SERVER['HTTP_REFERER']);
     }
 
-    // --- 3. PDF GENERATOR & DOWNLOAD ---
+    // --- 3. PDF GENERATOR ---
     private function generate_certificate_pdf($att, $training) {
         if (!class_exists('TCPDF')) { $this->load->library('pdf'); }
         $pdf = new TCPDF('L', 'mm', 'A4', true, 'UTF-8', false);

@@ -97,7 +97,7 @@ class Training_manager extends AdminController
         $this->load->view('event', $data);
     }
 
-    // --- 4. NEW FEATURES: STATUS & EXPENSE SYNC ---
+    // --- 4. ACTIONS & STATUS ---
     public function mark_status($id, $status) {
         if(!has_permission('training_manager','','edit')) access_denied();
         $this->db->where('id', $id)->update(db_prefix().'trainings', ['is_active' => $status]);
@@ -152,7 +152,7 @@ class Training_manager extends AdminController
         set_alert('success', "Synced $count Leads"); redirect(admin_url('training_manager/event/'.$id));
     }
 
-    // --- 5. ATTENDEE ACTIONS (With Invoice Fix) ---
+    // --- 5. ATTENDEE & UTILS ---
     public function add_walkin() {
         if(!has_permission('training_manager','','edit')) access_denied();
         $data = $this->input->post(); $data['status'] = 1; 
@@ -181,7 +181,6 @@ class Training_manager extends AdminController
         set_alert('success', 'Rescheduled'); redirect($_SERVER['HTTP_REFERER']);
     }
 
-    // --- 6. UTILS, IMPORT (With CSV Fix), MEDIA ---
     public function import_attendees($id) { 
         if(isset($_FILES['file_csv']['name']) && $_FILES['file_csv']['name'] != ''){ 
             $file = $_FILES['file_csv']['tmp_name']; $handle = fopen($file, "r"); $row = 0;
@@ -218,8 +217,24 @@ class Training_manager extends AdminController
     public function delete_question($id) { $this->db->where('id',$id)->delete(db_prefix().'training_quiz_questions'); redirect($_SERVER['HTTP_REFERER']); }
     public function add_expense() { $this->training_model->add_expense($this->input->post()); redirect($_SERVER['HTTP_REFERER']); }
     public function delete_event($id) { $this->training_model->delete($id); redirect(admin_url('training_manager')); }
+    
+    // FIX: Ensure CALENDAR data returns JSON properly
     public function calendar() { $data['title']='Training Calendar'; $this->load->view('calendar', $data); }
-    public function get_calendar_data() { $ts=$this->training_model->get_all(); $ev=[]; foreach($ts as $t){ $ev[]=['title'=>$t['subject'], 'start'=>$t['start_date'], 'end'=>$t['end_date'], 'url'=>admin_url('training_manager/event/'.$t['id']), 'color'=>($t['is_active']?'#2563eb':'#94a3b8')]; } echo json_encode($ev); }
+    public function get_calendar_data() { 
+        $ts=$this->training_model->get_all(); 
+        $ev=[]; 
+        foreach($ts as $t){ 
+            $ev[]=[
+                'title'=>$t['subject'], 
+                'start'=>date('c', strtotime($t['start_date'])), 
+                'end'=>date('c', strtotime($t['end_date'])), 
+                'url'=>admin_url('training_manager/event/'.$t['id']), 
+                'color'=>($t['is_active']?'#2563eb':'#94a3b8')
+            ]; 
+        } 
+        header('Content-Type: application/json');
+        echo json_encode($ev); 
+    }
 
     public function bulk_email_certificates($id) {
         if (!has_permission('training_manager', '', 'view')) access_denied();

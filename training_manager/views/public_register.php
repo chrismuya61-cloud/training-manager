@@ -22,7 +22,6 @@
         .remove-row { position: absolute; top: 10px; right: 15px; color: #ef4444; cursor: pointer; font-size: 1.2rem; font-weight: bold; }
         .add-btn { background: #eff6ff; color: #2563eb; border: 2px dashed #bfdbfe; width: 100%; padding: 12px; border-radius: 10px; font-weight: 600; margin-top: 10px; transition: 0.2s; }
         .add-btn:hover { background: #dbeafe; border-color: #2563eb; }
-        
         /* Logo Fix */
         .logo-container img { max-height: 40px; }
         .logo-container { filter: brightness(0) invert(1); margin-bottom: 15px; }
