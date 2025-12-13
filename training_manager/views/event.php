@@ -128,12 +128,15 @@
                                                         </span>
                                                     </div>
                                                 </td>
-                                                <td>
-                                                    <?php if($a['status']==0){ ?>
-                                                        <a href="<?php echo admin_url('training_manager/check_in/'.$a['id']); ?>" class="btn btn-success btn-xs" data-toggle="tooltip" title="Check In"><i class="fa fa-check"></i></a>
-                                                        <a href="#" onclick="reschedule(<?php echo $a['id']; ?>)" class="btn btn-info btn-xs" data-toggle="tooltip" title="Reschedule"><i class="fa fa-calendar"></i></a>
+                                                <td class="text-right">
+                                                    <?php if($a['status'] == 0){ ?>
+                                                        <a href="<?php echo admin_url('training_manager/check_in/'.$a['id']); ?>" class="btn btn-success btn-xs mright5">Check In</a>
+                                                        <a href="#" onclick="reschedule(<?php echo $a['id']; ?>)" class="btn btn-default btn-xs" data-toggle="tooltip" title="Reschedule"><i class="fa fa-calendar"></i></a>
                                                     <?php } ?>
-                                                    <a href="<?php echo admin_url('training_manager/download_certificate/'.$a['id']); ?>" class="btn btn-default btn-xs" data-toggle="tooltip" title="Download Certificate"><i class="fa fa-file-pdf-o text-danger"></i></a>
+                                                    
+                                                    <?php if($a['status'] == 1){ ?>
+                                                        <a href="<?php echo admin_url('training_manager/download_certificate/'.$a['id']); ?>" class="btn btn-info btn-xs"><i class="fa fa-download"></i> Certificate</a>
+                                                    <?php } ?>
                                                 </td>
                                             </tr>
                                         <?php } ?>
