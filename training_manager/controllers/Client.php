@@ -156,7 +156,7 @@ class Client extends ClientsController
         $pdf->SetPrintHeader(false); $pdf->SetPrintFooter(false); $pdf->SetAutoPageBreak(false); $pdf->AddPage();
         $path = module_dir_path('training_manager', 'assets/');
         if(file_exists($path.'cert_bg.jpg') && @getimagesize($path.'cert_bg.jpg')) $pdf->Image($path.'cert_bg.jpg', 0, 0, 297, 210); else $pdf->Rect(10, 10, 277, 190);
-        if(file_exists($path.'logo.png') && @getimagesize($path.'logo.png')) { list($w, $h) = getimagesize($path.'logo.png'); $r = $h/$w; $cw = 60; $pdf->Image($path.'logo.png', (297-$cw)/2, 20, $cw); $pdf->SetY(20+($cw*$r)+5); } else { $pdf->SetY(25); $pdf->SetFont('times', 'B', 24); $pdf->Cell(0, 15, strtoupper(get_option('companyname')), 0, 1, 'C'); }
+        if(file_exists($path.'logo.png') && @getimagesize($path.'logo.png')) { list($w, $h) = getimagesize($path.'logo.png'); $r = $h/$w; $cw = 70; $pdf->Image($path.'logo.png', (297-$cw)/2, 20, $cw); $pdf->SetY(20+($cw*$r)+5); } else { $pdf->SetY(25); $pdf->SetFont('times', 'B', 24); $pdf->Cell(0, 15, strtoupper(get_option('companyname')), 0, 1, 'C'); }
         $pdf->Ln(5); $pdf->SetFont('times', 'B', 36); $pdf->Cell(0, 15, 'CERTIFICATE OF PARTICIPATION', 0, 1, 'C');
         $pdf->Ln(2); $pdf->SetFont('helvetica', '', 14); $pdf->Cell(0, 10, 'This Acknowledges That', 0, 1, 'C');
         $pdf->Ln(2); $pdf->SetFont('times', 'B', 32); $pdf->SetTextColor(0,51,102); $pdf->Cell(0, 15, strtoupper($reg->name), 0, 1, 'C');

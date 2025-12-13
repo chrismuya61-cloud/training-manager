@@ -129,6 +129,8 @@
                                                     </div>
                                                 </td>
                                                 <td class="text-right">
+                                                    <a href="#" onclick="edit_attendee(<?php echo $a['id']; ?>, '<?php echo addslashes($a['name']); ?>', '<?php echo $a['email']; ?>', '<?php echo $a['phonenumber']; ?>')" class="btn btn-default btn-xs mright5" title="Edit Details"><i class="fa fa-pencil"></i></a>
+
                                                     <?php if($a['status'] == 0){ ?>
                                                         <a href="<?php echo admin_url('training_manager/check_in/'.$a['id']); ?>" class="btn btn-success btn-xs mright5">Check In</a>
                                                         <a href="#" onclick="reschedule(<?php echo $a['id']; ?>)" class="btn btn-default btn-xs" data-toggle="tooltip" title="Reschedule"><i class="fa fa-calendar"></i></a>
@@ -184,9 +186,51 @@
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="editAttendeeModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                <h4 class="modal-title">Edit Attendee Details</h4>
+            </div>
+            <?php echo form_open(admin_url('training_manager/update_attendee')); ?>
+            <div class="modal-body">
+                <input type="hidden" name="id" id="edit_id">
+                <div class="form-group">
+                    <label class="control-label">Full Name</label>
+                    <input type="text" name="name" id="edit_name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="control-label">Email Address</label>
+                    <input type="email" name="email" id="edit_email" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="control-label">Phone Number</label>
+                    <input type="text" name="phonenumber" id="edit_phone" class="form-control">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+            <?php echo form_close(); ?>
+        </div>
+    </div>
+</div>
+
 <?php init_tail(); ?>
 <script>
     function copyLink() { var c = document.getElementById("regLink"); c.select(); document.execCommand("copy"); alert("Registration Link Copied!"); }
     function copyPortal(id) { var c = document.getElementById(id); c.select(); document.execCommand("copy"); alert("Student Portal Link Copied!"); }
     function reschedule(id) { var n = prompt("New Event ID:"); if(n) window.location.href = "<?php echo admin_url('training_manager/reschedule_attendee/'); ?>"+id+"/"+n; }
+    
+    // Populate Modal
+    function edit_attendee(id, name, email, phone) {
+        $('#edit_id').val(id);
+        $('#edit_name').val(name);
+        $('#edit_email').val(email);
+        $('#edit_phone').val(phone);
+        $('#editAttendeeModal').modal('show');
+    }
 </script>

@@ -174,6 +174,18 @@ class Training_manager extends AdminController
         set_alert('success', 'Walk-in Added'); redirect($_SERVER['HTTP_REFERER']);
     }
 
+    // FIX: NEW FUNCTION TO EDIT ATTENDEE
+    public function update_attendee() {
+        if(!has_permission('training_manager','','edit')) access_denied();
+        $data = $this->input->post();
+        $id = $data['id'];
+        unset($data['id']); // Remove ID from update data
+        
+        $this->db->where('id', $id)->update(db_prefix().'training_registrations', $data);
+        set_alert('success', 'Attendee Updated Successfully');
+        redirect($_SERVER['HTTP_REFERER']);
+    }
+
     public function check_in($id) {
         if(!has_permission('training_manager','','edit')) access_denied();
         $this->db->where('id', $id)->update(db_prefix().'training_registrations', ['status' => 1]);
@@ -224,28 +236,20 @@ class Training_manager extends AdminController
     public function delete_question($id) { $this->db->where('id',$id)->delete(db_prefix().'training_quiz_questions'); redirect($_SERVER['HTTP_REFERER']); }
     public function add_expense() { $this->training_model->add_expense($this->input->post()); redirect($_SERVER['HTTP_REFERER']); }
     public function delete_event($id) { $this->training_model->delete($id); redirect(admin_url('training_manager')); }
-    
-    // --- CALENDAR DATA (FIXED) ---
     public function calendar() { $data['title']='Training Calendar'; $this->load->view('calendar', $data); }
     public function get_calendar_data() { 
-        $ts=$this->training_model->get_all(); 
-        $ev=[]; 
+        $ts=$this->training_model->get_all(); $ev=[]; 
         foreach($ts as $t){ 
             $ev[]=[
-                'title' => $t['subject'], 
-                'start' => date('c', strtotime($t['start_date'])), 
-                'end'   => date('c', strtotime($t['end_date'])), 
-                'url'   => admin_url('training_manager/event/'.$t['id']), 
-                'color' => ($t['is_active']?'#2563eb':'#94a3b8'),
-                'extendedProps' => [
-                    'venue' => $t['venue'],
-                    'status' => ($t['is_active']?'Active':'Closed')
-                ]
+                'title'=>$t['subject'], 
+                'start'=>date('c', strtotime($t['start_date'])), 
+                'end'=>date('c', strtotime($t['end_date'])), 
+                'url'=>admin_url('training_manager/event/'.$t['id']), 
+                'color'=>($t['is_active']?'#2563eb':'#94a3b8')
             ]; 
         } 
-        header('Content-Type: application/json');
-        echo json_encode($ev);
-        die(); // CRITICAL: Stop further output to ensure valid JSON
+        header('Content-Type: application/json'); echo json_encode($ev); 
+        die();
     }
 
     public function bulk_email_certificates($id) {
@@ -272,8 +276,8 @@ class Training_manager extends AdminController
         foreach($atts as $a){
             $x=15+($col*91); $y=15+($row*59);
             if(file_exists($bg) && filesize($bg)>0 && @getimagesize($bg)) $pdf->Image($bg, $x, $y, 86, 54); else $pdf->Rect($x, $y, 86, 54);
-            $pdf->SetXY($x, $y+20); $pdf->SetFont('helvetica', 'B', 14); $pdf->Cell(86, 0, $a['name'], 0, 1, 'C');
-            $pdf->write2DBarcode($a['unique_ticket_code'], 'QRCODE,H', $x+65, $y+35, 15, 15);
+            $pdf->SetXY($x, $y+20); $pdf->SetFont('helvetica', 'B', 13); $pdf->Cell(86, 0, $a['name'], 0, 1, 'C');
+            $pdf->write2DBarcode($a['unique_ticket_code'], 'QRCODE,H', $x+65, $y+29, 15, 15);
             $col++; if($col>1){$col=0; $row++;} if($row>4){$pdf->AddPage(); $col=0; $row=0;}
         }
         $pdf->Output('Badges.pdf', 'I');
@@ -285,20 +289,21 @@ class Training_manager extends AdminController
         $pdf->SetPrintHeader(false); $pdf->SetPrintFooter(false); $pdf->SetAutoPageBreak(false); $pdf->AddPage();
         $path = module_dir_path('training_manager', 'assets/');
         if(file_exists($path.'cert_bg.jpg') && @getimagesize($path.'cert_bg.jpg')) $pdf->Image($path.'cert_bg.jpg', 0, 0, 297, 210); else $pdf->Rect(10, 10, 277, 190);
-        if(file_exists($path.'logo.png') && @getimagesize($path.'logo.png')) { list($w, $h) = getimagesize($path.'logo.png'); $r = $h/$w; $cw = 60; $pdf->Image($path.'logo.png', (297-$cw)/2, 20, $cw); $pdf->SetY(20+($cw*$r)+5); } else { $pdf->SetY(25); $pdf->SetFont('times', 'B', 24); $pdf->Cell(0, 15, strtoupper(get_option('companyname')), 0, 1, 'C'); }
+        if(file_exists($path.'logo.png') && @getimagesize($path.'logo.png')) { list($w, $h) = getimagesize($path.'logo.png'); $r = $h/$w; $cw = 70; $pdf->Image($path.'logo.png', (297-$cw)/2, 20, $cw); $pdf->SetY(20+($cw*$r)+5); } else { $pdf->SetY(25); $pdf->SetFont('times', 'B', 24); $pdf->Cell(0, 15, strtoupper(get_option('companyname')), 0, 1, 'C'); }
         $pdf->Ln(5); $pdf->SetFont('times', 'B', 36); $pdf->Cell(0, 15, 'CERTIFICATE OF PARTICIPATION', 0, 1, 'C');
         $pdf->Ln(2); $pdf->SetFont('helvetica', '', 14); $pdf->Cell(0, 10, 'This Acknowledges That', 0, 1, 'C');
         $pdf->Ln(2); $pdf->SetFont('times', 'B', 32); $pdf->SetTextColor(0,51,102); $pdf->Cell(0, 15, strtoupper($att->name), 0, 1, 'C');
         $pdf->SetLineStyle(['width'=>0.5]); $pdf->Line(60, $pdf->GetY()-2, 237, $pdf->GetY()-2);
         $pdf->Ln(5); $pdf->SetFont('helvetica', '', 11); $pdf->SetTextColor(100); $pdf->Cell(0, 10, 'HAS SUCCESSFULLY PARTICIPATED IN', 0, 1, 'C');
-        $pdf->SetFont('helvetica', 'B', 16); $pdf->SetTextColor(0); $pdf->MultiCell(200, 10, strtoupper($training->subject), 0, 'C', 0, 1, 48);
+        $pdf->SetFont('helvetica', 'B', 15); $pdf->SetTextColor(0); $pdf->MultiCell(200, 10, strtoupper($training->subject), 0, 'C', 0, 1, 48);
         $pdf->Ln(3); $pdf->SetFont('helvetica', 'I', 13); $pdf->Cell(0, 10, 'Held at '.$training->venue.' on '._d($training->start_date), 0, 1, 'C');
         if($training->validity_months > 0){ $exp = date('Y-m-d', strtotime($training->end_date." + ".$training->validity_months." months")); $pdf->Ln(6); $pdf->SetFont('helvetica','B',11); $pdf->SetTextColor(200,0,0); $pdf->Cell(0,10,'Valid Until: '._d($exp),0,1,'C'); $pdf->SetTextColor(0); }
         $pdf->SetY(-55); if(file_exists($path.'signature.png') && @getimagesize($path.'signature.png')) $pdf->Image($path.'signature.png', 128, $pdf->GetY()-15, 40);
         $pdf->Ln(5); $pdf->SetFont('times', 'B', 14); $pdf->Cell(0, 6, 'Muya Kamamia', 0, 1, 'C');
-        $pdf->SetFont('helvetica', '', 10); $pdf->Cell(0, 5, 'Chairman', 0, 1, 'C');
-        $pdf->SetY(-20); $pdf->SetFont('helvetica', '', 9); $pdf->SetX(15); $pdf->Cell(50, 0, 'Serial: '.$att->unique_ticket_code, 0, 0, 'L');
-        $pdf->write2DBarcode(site_url('training_manager/verification/index/'.$att->unique_ticket_code), 'QRCODE,H', 260, 185, 20, 20);
+		$pdf->SetFont('helvetica', '', 12); $pdf->Cell(0, 5, 'Licensed Land Surveyor, Kenya', 0, 1, 'C');
+        $pdf->SetFont('helvetica', '', 12); $pdf->Cell(0, 5, 'Chairman, Measurement Systems Ltd', 0, 1, 'C');
+        $pdf->SetY(-39); $pdf->SetFont('helvetica', '', 9); $pdf->SetX(38); $pdf->Cell(55, 0, 'Serial: '.$att->unique_ticket_code, 0, 0, 'L');
+        $pdf->write2DBarcode(site_url('training_manager/verification/index/'.$att->unique_ticket_code), 'QRCODE,H', 240, 160, 26, 26);
         return $pdf;
     }
 
